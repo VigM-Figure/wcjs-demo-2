@@ -1,8 +1,39 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import {
+  useWalletConnect,
+  QRCodeModal,
+  WINDOW_MESSAGES,
+} from "@provenanceio/walletconnect-js";
+import logo from "./logo.svg";
+import "./App.css";
 
 function App() {
+  const [initialLoad, setInitialLoad] = useState(true);
+  const { walletConnectService, walletConnectState } = useWalletConnect();
+  const { connected } = walletConnectState;
+
+  useEffect(() => {
+    const connected = (data: any) => {
+      console.log("WINDOW_MESSAGES.CONNECTED EVENT!: ", data);
+    };
+    if (initialLoad) {
+      setInitialLoad(false);
+      console.log("Adding WC listeners");
+      walletConnectService.addListener(WINDOW_MESSAGES.CONNECTED, connected);
+    }
+    return () => {
+      console.log("Removing WC listeners");
+      walletConnectService.removeListener(WINDOW_MESSAGES.CONNECTED, connected);
+    };
+  }, []);
+
+  const handleConnect = () => {
+    walletConnectService.connect();
+  };
+  const handleDisconnect = () => {
+    walletConnectService.disconnect();
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -18,7 +49,15 @@ function App() {
         >
           Learn React
         </a>
+        {!connected && <button onClick={handleConnect}>connect</button>}
+        {connected && (
+          <div>
+            <div>Connected!</div>
+            <button onClick={handleDisconnect}>disconnect</button>
+          </div>
+        )}
       </header>
+      <QRCodeModal walletConnectService={walletConnectService} />
     </div>
   );
 }
