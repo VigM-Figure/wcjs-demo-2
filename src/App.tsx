@@ -9,8 +9,24 @@ import "./App.css";
 
 function App() {
   const [initialLoad, setInitialLoad] = useState(true);
+  const [initialDisconnect, setInitialDisconnect] = useState(true);
   const { walletConnectService, walletConnectState } = useWalletConnect();
   const { connected } = walletConnectState;
+
+  // Testing to see walletConnectState values on load
+  useEffect(() => {
+    if (initialDisconnect) {
+      setInitialDisconnect(false);
+      if (connected) {
+        console.log(
+          "walletConnectState.connector: ",
+          walletConnectState.connector
+        );
+
+        walletConnectService.disconnect();
+      }
+    }
+  }, [walletConnectState, walletConnectService, connected, initialDisconnect]);
 
   useEffect(() => {
     const connected = (data: any) => {
