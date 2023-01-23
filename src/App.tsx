@@ -2,46 +2,41 @@ import React, { useEffect, useState } from "react";
 import {
   useWalletConnect,
   QRCodeModal,
-  WINDOW_MESSAGES,
+  BroadcastResult,
 } from "@provenanceio/walletconnect-js";
 import logo from "./logo.svg";
 import "./App.css";
 
 function App() {
-  const [initialLoad, setInitialLoad] = useState(true);
-  const [initialDisconnect, setInitialDisconnect] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [error, setError] = useState("");
+  const [signingComplete, setSigningComplete] = useState(false);
+  const [result, setResult] = useState<BroadcastResult | "">("");
   const { walletConnectService, walletConnectState } = useWalletConnect();
   const { connected } = walletConnectState;
 
-  // Testing to see walletConnectState values on load
+  // Attempt to re-create Matt H. wcjs issue here
   useEffect(() => {
-    if (initialDisconnect) {
-      setInitialDisconnect(false);
-      if (connected) {
-        console.log(
-          "walletConnectState.connector: ",
-          walletConnectState.connector
-        );
-
-        walletConnectService.disconnect();
-      }
+    if (isOpen) {
+      setResult("");
+      setError("");
+      setSigningComplete(false);
+      walletConnectService
+        .signMessage("test")
+        .then((data) => {
+          if (!data.error) {
+            setSigningComplete(true);
+            setResult(data);
+          } else {
+            setError(data.error);
+          }
+        })
+        .catch((e) => {
+          console.error("ERR", e);
+          setError(e);
+        });
     }
-  }, [walletConnectState, walletConnectService, connected, initialDisconnect]);
-
-  useEffect(() => {
-    const connected = (data: any) => {
-      console.log("WINDOW_MESSAGES.CONNECTED EVENT!: ", data);
-    };
-    if (initialLoad) {
-      setInitialLoad(false);
-      console.log("Adding WC listeners");
-      walletConnectService.addListener(WINDOW_MESSAGES.CONNECTED, connected);
-    }
-    return () => {
-      console.log("Removing WC listeners");
-      walletConnectService.removeListener(WINDOW_MESSAGES.CONNECTED, connected);
-    };
-  }, []);
+  }, [isOpen, walletConnectService]);
 
   const handleConnect = () => {
     walletConnectService.connect();
@@ -49,28 +44,37 @@ function App() {
   const handleDisconnect = () => {
     walletConnectService.disconnect();
   };
+  const toggleIsOpen = () => {
+    setIsOpen(!isOpen);
+  };
 
   return (
     <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-        {!connected && <button onClick={handleConnect}>connect</button>}
-        {connected && (
+        <h1>WCJS TEST APP</h1>
+        {connected ? (
           <div>
             <div>Connected!</div>
             <button onClick={handleDisconnect}>disconnect</button>
+            <button onClick={toggleIsOpen}>isOpen: {`${isOpen}`}</button>
+            {error && <div>Error: {error}</div>}
+            {signingComplete && <div>Signing Complete!</div>}
+            {result && (
+              <div
+                style={{
+                  maxWidth: "80%",
+                  margin: "20px auto",
+                  lineBreak: "anywhere",
+                }}
+              >
+                {" "}
+                {`Result: ${JSON.stringify(result)}`}
+              </div>
+            )}
           </div>
+        ) : (
+          <button onClick={handleConnect}>connect</button>
         )}
       </header>
       <QRCodeModal walletConnectService={walletConnectService} />
